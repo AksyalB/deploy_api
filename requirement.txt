@@ -1,0 +1,6 @@
+Flask
+flask-mysql
+requests
+google-cloud-storage
+jsonify
+Response
