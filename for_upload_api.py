@@ -22,13 +22,14 @@ def schedule_route():
     jns_hewan = data['jns_hewan']
     jns_tank = data['jns_tank']
     jmlh_pakan = data['jmlh_pakan']
+    kondisi_switch = data['kondisi_switch']
 
     # Koneksi MySQL
     conn = mysql.connect()
     cursor = conn.cursor()
 
     try:
-        cursor.execute("INSERT INTO schedule_alarm (userId, waktu, jns_hewan, jns_tank, jmlh_pakan) VALUES (%s, %s, %s, %s, %s)", (userId, waktu, jns_hewan, jns_tank, jmlh_pakan))
+        cursor.execute("INSERT INTO schedule_alarm (userId, waktu, jns_hewan, jns_tank, jmlh_pakan, kondisi_switch) VALUES (%s, %s, %s, %s, %s, %s)", (userId, waktu, jns_hewan, jns_tank, jmlh_pakan, kondisi_switch))
         conn.commit()
         conn.close()
 
@@ -50,7 +51,7 @@ def schedule_route():
 
 @app.route('/getscheduleAlarm', methods=['GET'])
 def get_schedule_route():
-    sche_id = request.args.get('id')
+    sche_id = request.args.get('userId')
 
     # Koneksi MySQL
     conn = mysql.connect()
@@ -89,6 +90,7 @@ def get_schedule_route():
 
 @app.route('/deletescheduleAlarm', methods=['DELETE'])
 def deleteschedulealarm():
+    sche_user_id = request.args.get('userId')
     sche_id = request.args.get('id')
 
     # Koneksi MySQL
@@ -97,7 +99,7 @@ def deleteschedulealarm():
 
 
     try:
-        cursor.execute("DELETE FROM schedule_alarm WHERE userId = %s", (sche_id,))
+        cursor.execute("DELETE FROM schedule_alarm WHERE userId = %s AND id = %s " , (sche_user_id, sche_id,))
         conn.commit()
 
         if cursor.rowcount == 0:
@@ -414,16 +416,16 @@ def servo_terbuka():
     
 @app.route('/getdatamanual', methods=['GET'])
 def GetManual():
-    sche_id = request.args.get('id')
+    sche_id = request.args.get('userId')
 
     # Koneksi MySQL
     conn = mysql.connect()
     cursor = conn.cursor()
 
     if sche_id is None:
-        query = "SELECT * FROM control_manual"
+        query = "SELECT * FROM control_manual ORDER BY id DESC LIMIT 1"
     else:
-        query = "SELECT * FROM control_manual WHERE userId = '" + sche_id + "'"
+        query = "SELECT * FROM control_manual WHERE userId = %s ORDER BY id DESC LIMIT 1"
     
     try:
         cursor.execute(query)
@@ -451,7 +453,7 @@ def GetManual():
 
 @app.route('/getcontraspi', methods=['GET'])
 def buat_raspi():
-    getdata = request.args.get('id')
+    getdata = request.args.get('userId')
 
     conn = mysql.connect()
     cursor = conn.cursor()
@@ -459,10 +461,14 @@ def buat_raspi():
     if getdata is None:
         query = "SELECT * FROM control_manual ORDER BY id DESC LIMIT 1"
     else:
-        query = "SELECT * FROM control_manual WHERE userId = '" + getdata + "'"
+        query = "SELECT * FROM control_manual WHERE userId = %s ORDER BY id DESC LIMIT 1"
 
     try:
-        cursor.execute(query)
+        if getdata is None:
+            cursor.execute(query)
+        else:
+            cursor.execute(query, (getdata,))
+        
         rows = cursor.fetchall()
         results = []
         for row in rows:
@@ -477,7 +483,6 @@ def buat_raspi():
         return jsonify(results)
 
     except Exception as e:
-        conn.close()
         response = {
             'status': 'error',
             'message': 'Terjadi kesalahan saat mengambil data',
@@ -487,7 +492,7 @@ def buat_raspi():
     
 @app.route('/getscheduledata', methods=['GET'])
 def dataloadcell_raspi():
-    getdata = request.args.get('id')
+    getdata = request.args.get('userId')
 
     conn = mysql.connect()
     cursor = conn.cursor()
@@ -495,7 +500,7 @@ def dataloadcell_raspi():
     if getdata is None:
         query = "SELECT * FROM schedule_alarm ORDER BY id DESC LIMIT 1"
     else:
-        query = "SELECT * FROM schedule_alarm WHERE id = '" + getdata + "'"
+        query = "SELECT * FROM schedule_alarm WHERE userId = '" + getdata + "'"
 
     try:
         cursor.execute(query)
