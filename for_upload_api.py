@@ -72,7 +72,9 @@ def get_schedule_route():
                 'waktu': row[2],
                 'jns_hewan': row[3],
                 'jns_tank': row[4],
-                'jmlh_pakan': row[5]
+                'jmlh_pakan': row[5],
+                'kondisi_switch':row[6]
+
             }
             results.append(result)
 
@@ -389,14 +391,16 @@ def servo_terbuka():
     jns_tank = data['jenis_tank']
     jns_hewan = data['jenis_hewan']
     button = data['buka_servo']
+    jumlah_pakan = data['jumlah_pakan']
 
     # Koneksi MySQL
     conn = mysql.connect()
     cursor = conn.cursor()
 
     try:
-        cursor.execute("INSERT INTO control_manual (userId, jenis_tank, jenis_hewan, buka_servo) VALUES (%s, %s, %s, %s)", (userId, jns_tank, jns_hewan, button))
+        cursor.execute("INSERT INTO control_manual (userId, jenis_tank, jenis_hewan, buka_servo, jumlah_pakan) VALUES (%s, %s, %s, %s, %s)", (userId, jns_tank, jns_hewan, button, jumlah_pakan))
         conn.commit()
+        cursor.close()
         conn.close()
 
         response = {
@@ -409,7 +413,7 @@ def servo_terbuka():
         conn.close()
         response = {
             'status': 'error',
-            'message': 'Terjadi kesalahan saat inout data',
+            'message': 'Terjadi kesalahan saat input data',
             'error': str(e)
         }
         return jsonify(response)
@@ -423,9 +427,9 @@ def GetManual():
     cursor = conn.cursor()
 
     if sche_id is None:
-        query = "SELECT * FROM control_manual ORDER BY id DESC LIMIT 1"
+        query = "SELECT * FROM control_manual "
     else:
-        query = "SELECT * FROM control_manual WHERE userId = %s ORDER BY id DESC LIMIT 1"
+        query = "SELECT * FROM control_manual WHERE userId = '" + sche_id + "'"
     
     try:
         cursor.execute(query)
@@ -476,7 +480,8 @@ def buat_raspi():
                 'id': row[0],
                 'jenis_hewan': row[3],
                 'jenis_tank': row[2],
-                'buka_servo': row[4]
+                'buka_servo': row[4],
+                'jumlah_pakan': row[5]
             }
             results.append(result)
 
@@ -532,7 +537,7 @@ def dataloadcell_raspi():
 def schedule_raspi():
     data = request.get_json()
     id = data["id"]
-    berat = data['berat']
+    jumlah_pakan = data['jumlah_pakan']
 
     # Koneksi MySQL
     conn = mysql.connect()
@@ -540,15 +545,15 @@ def schedule_raspi():
 
     try:
         # Periksa apakah id sudah ada
-        cursor.execute("SELECT * FROM schedule_alarm WHERE id = %s", (id,))
+        cursor.execute("SELECT * FROM control_manual WHERE id = %s", (id,))
         result = cursor.fetchone()
 
         if not result:
             # Jika id tidak ditemukan, masukkan data baru
-            cursor.execute("INSERT INTO schedule_alarm (id, berat) VALUES (%s, %s)", (id, berat))
+            cursor.execute("INSERT INTO control_manual (id, jumlah_pakan) VALUES (%s, %s)", (id, jumlah_pakan))
         else:
             # Jika id ditemukan, perbarui data
-            cursor.execute("UPDATE schedule_alarm SET berat = %s WHERE id = %s", (berat, id))
+            cursor.execute("UPDATE control_manual SET jumlah_pakan = %s WHERE id = %s", (jumlah_pakan, id))
         
         conn.commit()
         conn.close()
